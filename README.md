@@ -4,7 +4,7 @@
 [![Algorithm](https://img.shields.io/badge/algorithm-Discrete%20PSO-555555)](#method)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-111111)](#colab-notebook)
 [![License](https://img.shields.io/badge/license-Educational-lightgrey)](#scope-and-guardrails)
-[![Deployment](https://img.shields.io/badge/deployment-status%20to%20be%20verified-999999)](#deployment)
+[![Deployment](https://img.shields.io/badge/deployment-Vercel%20temporary-111111)](#deployment)
 
 **Experiment 9 mini project for Nature-Inspired Computing (NIC Lab)**  
 **Topic:** Examination Timetable Scheduling Using Particle Swarm Optimization (PSO)  
@@ -19,7 +19,7 @@ Orbit demonstrates how a discrete particle swarm can place examinations into per
 
 | Resource | Link |
 | --- | --- |
-| Live website | To be added after a verified deployment |
+| Live website | [Temporary Vercel deployment](https://fleet-bayou-9rbyyz8.tmp.now) (expires unless claimed; this browser received HTTP 403) |
 | Google Colab notebook | [Open the project notebook](https://colab.research.google.com/drive/1GxqpVK-q_ZGQ7XSdVVrjEuHLYpR0fctJ) |
 | GitHub repository | [Hardik182005/NIA](https://github.com/Hardik182005/NIA) |
 
@@ -32,6 +32,7 @@ Orbit demonstrates how a discrete particle swarm can place examinations into per
 | `site/dist/` | Responsive black-on-white website and working 3D/PSO demo |
 | `reports/` | Four monochrome PDF reports with individualized cover pages |
 | `PROJECT_PROMPT.md` | Prompt used to define the implementation and guardrails |
+| `reports/*_Report.pdf` | Four student-specific monochrome reports with covers, website screenshots, Colab code/results, and detailed tables |
 
 ## Problem formulation
 
@@ -97,7 +98,7 @@ Then open `http://localhost:8765` and choose **Run PSO**. Drag across the 3D sce
 
 The static site is deployable on Vercel from `site/dist`. In Vercel, import this repository and set the project root to `site/dist`, framework preset to **Other**, and build command to none. The production URL will be recorded here only after deployment is confirmed.
 
-The static site can be deployed from the `site/dist` directory. Deployment status and production URL are recorded here after publication is verified. Do not commit or publish access tokens.
+Vercel Drop reported a successful temporary deployment at [https://fleet-bayou-9rbyyz8.tmp.now](https://fleet-bayou-9rbyyz8.tmp.now). The no-account deployment expires unless claimed; this browser received HTTP 403 when opening the temporary host, so treat the URL as unverified for general access. The local screenshot evidence in the reports comes from the exact `site/dist` build uploaded. Do not commit or publish access tokens.
 
 ## Scope and guardrails
 
@@ -107,6 +108,15 @@ The static site can be deployed from the `site/dist` directory. Deployment statu
 - The model does not include room capacities, invigilators, accessibility, course precedence, exam duration variation, or institutional rules.
 - PSO is stochastic in general and heuristic. Reproducible output on this instance is not proof of global optimality or operational readiness.
 - Any real timetable requires validation by its data owner and academic administrators before use.
+
+## Individual reports
+
+| Student | Roll no. | PDF report |
+| --- | ---: | --- |
+| Hardik Hinduja | 20 | [Open report](reports/Hardik_Hinduja_20_Exam_Timetable_PSO_Report.pdf) |
+| Avinash Gehi | 11 | [Open report](reports/Avinash_Gehi_11_Exam_Timetable_PSO_Report.pdf) |
+| Sahil Deshmukh | 9 | [Open report](reports/Sahil_Deshmukh_9_Exam_Timetable_PSO_Report.pdf) |
+| Siddharth Dey | 10 | [Open report](reports/Siddharth_Dey_10_Exam_Timetable_PSO_Report.pdf) |
 
 ## Team
 
