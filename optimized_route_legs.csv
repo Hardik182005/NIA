@@ -1,0 +1,11 @@
+Leg,From,To,From ID,To ID,Leg distance (km),Cumulative (km)
+1,VESIT Depot,South Exchange,DEPOT,STOP-09,3.245,3.245
+2,South Exchange,Garden Square,STOP-09,STOP-05,3.581,6.825
+3,Garden Square,Lakeview Hub,STOP-05,STOP-04,2.828,9.654
+4,Lakeview Hub,North Arcade,STOP-04,STOP-03,2.404,12.058
+5,North Arcade,East Works,STOP-03,STOP-06,3.0,15.058
+6,East Works,Riverside Depot,STOP-06,STOP-07,3.396,18.454
+7,Riverside Depot,Hillcrest Store,STOP-07,STOP-08,4.428,22.882
+8,Hillcrest Store,Cedar Market,STOP-08,STOP-02,2.802,25.684
+9,Cedar Market,Harbour Point,STOP-02,STOP-01,2.47,28.154
+10,Harbour Point,VESIT Depot,STOP-01,DEPOT,3.0,31.154

@@ -1,0 +1,6 @@
+Check,Pass,Observed
+Starts and ends at depot,True,DEPOT to DEPOT
+Every delivery stop visited exactly once,True,9
+All required stops included,True,9 of 9
+Distance matches independent leg sum,True,31.153595 km
+ACO matches exact optimum on this instance,True,0.000000% gap

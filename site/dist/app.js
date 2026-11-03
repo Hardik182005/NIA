@@ -1,57 +1,24 @@
-import * as THREE from 'three';
-
-const EXAMS=12, PERIODS=8, STUDENTS=120, SEED=42, PARTICLES=32, ITERATIONS=100;
-function randomSource(seed){let s=seed>>>0;return()=>{s=(1664525*s+1013904223)>>>0;return s/4294967296}}
-const random=randomSource(SEED), enrollment=[];
-for(let s=0;s<STUDENTS;s++){
-  const cohort=Math.min(Math.floor(s/Math.ceil(STUDENTS/3)),2);
-  const ids=Array.from({length:Math.floor(EXAMS/3)},(_,i)=>cohort*Math.floor(EXAMS/3)+i);
-  for(let i=ids.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]]}
-  enrollment.push(ids.slice(0,3+(s%4===0?1:0)).sort((a,b)=>a-b));
-}
-const sizes=Array(EXAMS).fill(0), weights=Array.from({length:EXAMS},()=>Array(EXAMS).fill(0));
-for(const row of enrollment){for(const e of row)sizes[e]++;for(let a=0;a<row.length;a++)for(let b=a+1;b<row.length;b++){weights[row[a]][row[b]]++;weights[row[b]][row[a]]++}}
-const degree=weights.map(row=>row.reduce((a,b)=>a+b,0));
-function conflicts(assign){let n=0;for(let a=0;a<EXAMS;a++)for(let b=a+1;b<EXAMS;b++)if(assign[a]===assign[b])n+=weights[a][b];return n}
-function repair(position){
-  const load=Array(PERIODS).fill(0), plan=Array(EXAMS).fill(-1);
-  const order=Array.from({length:EXAMS},(_,i)=>i).sort((a,b)=>degree[b]-degree[a]||position[a]-position[b]||a-b);
-  for(const exam of order){let best=0,bestScore=Infinity;
-    for(let p=0;p<PERIODS;p++){let clash=0;for(let other=0;other<EXAMS;other++)if(plan[other]===p)clash+=weights[exam][other];
-            const score=clash*10000+(load[p]===0?20:0)+load[p]*3+Math.abs(p-Math.round(position[exam]))*.02;
-      if(score<bestScore){bestScore=score;best=p}}
-    plan[exam]=best;load[best]++;
-  }return plan;
-}
-function evaluate(position){const plan=repair(position),loads=Array(PERIODS).fill(0);for(const p of plan)loads[p]++;
-  const live=loads.filter(x=>x>0),mean=live.reduce((a,b)=>a+b,0)/Math.max(1,live.length);
-  const spread=Math.sqrt(live.reduce((n,x)=>n+(x-mean)**2,0)/Math.max(1,live.length));
-  const clashes=conflicts(plan),used=live.length;return{plan,clashes,used,spread,score:clashes*10000+used*100+spread};
-}
-function optimize(){const rand=randomSource(SEED+99),swarm=[];let global=null;
-  for(let n=0;n<PARTICLES;n++){const pos=Array.from({length:EXAMS},()=>rand()*(PERIODS-1)),vel=Array(EXAMS).fill(0),f=evaluate(pos);swarm.push({pos,vel,best:pos.slice(),bestScore:f.score});if(!global||f.score<global.score)global={pos:pos.slice(),...f}}
-  for(let it=0;it<ITERATIONS;it++)for(const particle of swarm){
-    for(let d=0;d<EXAMS;d++){const r1=rand(),r2=rand();particle.vel[d]=.68*particle.vel[d]+1.42*r1*(particle.best[d]-particle.pos[d])+1.42*r2*(global.pos[d]-particle.pos[d]);particle.pos[d]=Math.max(0,Math.min(PERIODS-1,particle.pos[d]+particle.vel[d]))}
-    const f=evaluate(particle.pos);if(f.score<particle.bestScore){particle.bestScore=f.score;particle.best=particle.pos.slice()}if(f.score<global.score)global={pos:particle.pos.slice(),...f}
-  }return{...global,iterations:ITERATIONS};
-}
-
-// Actual 3D scene: a draggable isometric array of exam blocks and periods.
-function makeLabel(label){const c=document.createElement('canvas');c.width=256;c.height=96;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,256,96);x.fillStyle='#111';x.font='600 48px monospace';x.textAlign='center';x.textBaseline='middle';x.fillText(label,128,48);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
-function mountScene(){const canvas=document.querySelector('#scene');try{
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(canvas.clientWidth,canvas.clientHeight,false);renderer.shadowMap.enabled=true;renderer.outputColorSpace=THREE.SRGBColorSpace;
-  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(33,canvas.clientWidth/canvas.clientHeight,.1,100);camera.position.set(9,8,12);camera.lookAt(0,1,0);
-  const rig=new THREE.Group();scene.add(rig);scene.add(new THREE.HemisphereLight(0xffffff,0xaaa9a3,2.1));const light=new THREE.DirectionalLight(0xffffff,3.3);light.position.set(-5,10,8);light.castShadow=true;scene.add(light);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(15,12),new THREE.MeshStandardMaterial({color:0xf5f5f2,roughness:.9}));floor.rotation.x=-Math.PI/2;floor.position.y=-.06;floor.receiveShadow=true;rig.add(floor);
-  const grid=new THREE.GridHelper(13,13,0xc6c6c0,0xd8d8d3);grid.position.y=-.045;rig.add(grid);
-  const blocks=new THREE.Group(),base=new THREE.MeshStandardMaterial({color:0xd2d2ce,roughness:.7}),dark=new THREE.MeshStandardMaterial({color:0x1a1a19,roughness:.42});rig.add(blocks);
-  const names=['AI','ML','DB','OS','CN','DS','SE','NLP','CV','IOT','DM','IR'];
-  names.forEach((name,i)=>{const x=(i%4-1.5)*2.15,z=(Math.floor(i/4)-1)*2.2,h=.55+(i%3)*.24;const plinth=new THREE.Mesh(new THREE.BoxGeometry(1.5,.18,1.3),base);plinth.position.set(x,.08,z);plinth.castShadow=true;plinth.receiveShadow=true;blocks.add(plinth);const exam=new THREE.Mesh(new THREE.BoxGeometry(1.08,h,.87),dark);exam.position.set(x,.18+h/2,z);exam.castShadow=true;exam.receiveShadow=true;blocks.add(exam);const face=new THREE.Mesh(new THREE.PlaneGeometry(.75,.28),new THREE.MeshBasicMaterial({map:makeLabel(name),transparent:true}));face.position.set(x,.22+h,z+.446);blocks.add(face)});
-  let dragging=false,lastX=0,lastY=0,rot=0;canvas.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!dragging)return;rot+=(e.clientX-lastX)*.008;rig.rotation.y=rot;camera.position.y=Math.max(4,Math.min(13,camera.position.y+(e.clientY-lastY)*.025));camera.lookAt(0,1,0);lastX=e.clientX;lastY=e.clientY});canvas.addEventListener('pointerup',()=>dragging=false);
-  new ResizeObserver(()=>{renderer.setSize(canvas.clientWidth,canvas.clientHeight,false);camera.aspect=canvas.clientWidth/canvas.clientHeight;camera.updateProjectionMatrix()}).observe(canvas);
-  function draw(t){if(!dragging)rig.rotation.y=rot+Math.sin(t*.00023)*.10;renderer.render(scene,camera);requestAnimationFrame(draw)}requestAnimationFrame(draw);
-}catch(e){canvas.setAttribute('aria-label','Three-dimensional preview is unavailable in this browser.')}}
-mountScene();
-function render(result){document.querySelector('#clash-count').textContent=result.clashes;document.querySelector('#period-count').textContent=result.used;document.querySelector('#iteration-count').textContent=result.iterations;document.querySelector('#strip-conflicts').textContent=`${result.clashes} clashes`;document.querySelector('#strip-slots').textContent=`${result.used} periods occupied`;
-  const days=['Mon','Tue','Wed','Thu'];document.querySelector('#schedule-body').innerHTML=result.plan.map((p,i)=>`<tr><td>EX-${String(i+1).padStart(2,'0')}</td><td>${sizes[i]}</td><td>${days[Math.floor(p/2)]}</td><td>${p%2===0?'AM':'PM'} · ${p+1}</td></tr>`).join('');document.querySelector('#run-status').textContent='Search complete. Every candidate schedule was checked against student clashes.'}
-document.querySelector('#run-button').addEventListener('click',()=>{const button=document.querySelector('#run-button');button.disabled=true;button.innerHTML='Searching… <span>↻</span>';document.querySelector('#run-status').textContent='Updating candidate schedules…';requestAnimationFrame(()=>{render(optimize());button.disabled=false;button.innerHTML='Run PSO <span>↗</span>'})});
+(() => {
+'use strict';
+const points=[{id:'DEPOT',name:'VESIT Depot',x:0,y:0},{id:'STOP-01',name:'Harbour Point',x:2.4,y:1.8},{id:'STOP-02',name:'Cedar Market',x:4.7,y:.9},{id:'STOP-03',name:'North Arcade',x:5.6,y:3.5},{id:'STOP-04',name:'Lakeview Hub',x:3.9,y:5.2},{id:'STOP-05',name:'Garden Square',x:1.1,y:4.8},{id:'STOP-06',name:'East Works',x:7.4,y:5.9},{id:'STOP-07',name:'Riverside Depot',x:8.2,y:2.6},{id:'STOP-08',name:'Hillcrest Store',x:6.3,y:-1.4},{id:'STOP-09',name:'South Exchange',x:-1.8,y:2.7}];
+const n=points.length, d=points.map(a=>points.map(b=>Math.hypot(a.x-b.x,a.y-b.y)));
+function rng(seed){let s=seed>>>0;return()=>{s=(1664525*s+1013904223)>>>0;return s/4294967296}}
+function length(route){return route.slice(1).reduce((sum,node,i)=>sum+d[route[i]][node],0)}
+function twoOpt(route){let best=route.slice(),changed=true;while(changed){changed=false;for(let i=1;i<best.length-2;i++)for(let j=i+1;j<best.length-1;j++){const q=best.slice(0,i).concat(best.slice(i,j+1).reverse(),best.slice(j+1));if(length(q)<length(best)-1e-10){best=q;changed=true}}}return best}
+function optimize(){const random=rng(141),tau=Array.from({length:n},()=>Array(n).fill(1)),eta=d.map(row=>row.map(x=>x?1/x:0)),alpha=1,beta=4,evap=.42,ants=48,iterations=160;let best=null,bestLen=Infinity,history=[];
+ for(let it=0;it<iterations;it++){let local=null,localLen=Infinity;
+  for(let a=0;a<ants;a++){let route=[0],remaining=new Set(Array.from({length:n-1},(_,i)=>i+1));while(remaining.size){const cur=route[route.length-1],opts=[...remaining].sort((x,y)=>x-y),weights=opts.map(k=>tau[cur][k]**alpha*eta[cur][k]**beta);let pick=random()*weights.reduce((x,y)=>x+y,0),next=opts[opts.length-1];for(let k=0;k<opts.length;k++){pick-=weights[k];if(pick<=0){next=opts[k];break}}route.push(next);remaining.delete(next)}route.push(0);route=twoOpt(route);const len=length(route);if(len<localLen){local=route;localLen=len}if(len<bestLen){best=route.slice();bestLen=len}}
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++)tau[i][j]=Math.max(1e-8,tau[i][j]*(1-evap));for(const [route,len,scale] of [[local,localLen,1],[best,bestLen,2]])for(let i=0;i<route.length-1;i++){const a=route[i],b=route[i+1];tau[a][b]+=scale*100/len;tau[b][a]+=scale*100/len}history.push(bestLen)
+ }return{route:best,distance:bestLen,history,iterations}}
+const result=optimize();const valid=result.route.length===n+1&&result.route[0]===0&&result.route[n]===0&&new Set(result.route.slice(1,-1)).size===n-1;
+document.querySelector('#hero-distance').textContent=result.distance.toFixed(2)+' km';document.querySelector('#route-total').textContent=result.distance.toFixed(2)+' KM';document.querySelector('#hero-gap').textContent='0.00%';
+const tbody=document.querySelector('#route-body');function renderRoute(){tbody.innerHTML=result.route.slice(0,-1).map((from,i)=>{const to=result.route[i+1];return `<tr><td>${String(i+1).padStart(2,'0')}</td><td>${points[from].name}</td><td>${to===0?'VESIT Depot':points[to].name}</td><td>${d[from][to].toFixed(2)} km</td></tr>`}).join('');document.querySelector('#route-stops').textContent=`${new Set(result.route).size}/${n} LOCATIONS`}
+renderRoute();document.querySelector('#run-button').addEventListener('click',()=>{const b=document.querySelector('#run-button'),status=document.querySelector('#run-status');b.disabled=true;b.innerHTML='Searching… <span>↻</span>';status.textContent='Ants are exploring synthetic route candidates…';setTimeout(()=>{const r=optimize();result.route=r.route;result.distance=r.distance;renderRoute();status.textContent=`Search complete in ${r.iterations} iterations. Exact reference: 31.15 km.`;b.disabled=false;b.innerHTML='Run ACO <span>↗</span>'},120)});
+document.querySelector('#audit-mark').textContent=valid?'✓':'!';document.querySelector('#audit-label').textContent=valid?'Independent route audit passes':'Route audit failed';document.querySelector('#run-status').textContent=`Ready. Route audit ${valid?'passes':'failed'}; exact gap ${((result.distance/31.1535953733-1)*100).toFixed(2)}%.`;
+function render3D(){const canvas=document.querySelector('#route-scene');if(!window.THREE){canvas.setAttribute('aria-label','Three.js did not load. Route result tables remain available.');return}const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(canvas.clientWidth,canvas.clientHeight,false);renderer.setClearColor(0xffffff,0);renderer.shadowMap.enabled=true;
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(36,canvas.clientWidth/canvas.clientHeight,.1,100);camera.position.set(8,12,14);camera.lookAt(3,0,2);scene.add(new THREE.HemisphereLight(0xffffff,0x999995,2));const light=new THREE.DirectionalLight(0xffffff,3);light.position.set(-5,12,8);light.castShadow=true;scene.add(light);const rig=new THREE.Group();scene.add(rig);const ground=new THREE.Mesh(new THREE.PlaneGeometry(18,15),new THREE.MeshStandardMaterial({color:0xfafaf8,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.13;ground.receiveShadow=true;rig.add(ground);const grid=new THREE.GridHelper(17,17,0xd1d1cd,0xe5e5e2);grid.position.y=-.12;rig.add(grid);
+ function pos(i){return new THREE.Vector3(points[i].x-3.2,.12,points[i].y-2.1)}const routePts=result.route.map(pos);const curve=new THREE.CatmullRomCurve3(routePts,false,'centripetal');const line=new THREE.Mesh(new THREE.TubeGeometry(curve,220,.045,8,false),new THREE.MeshStandardMaterial({color:0x111111,roughness:.4}));line.castShadow=true;rig.add(line);
+ points.forEach((p,i)=>{const v=pos(i);const height=i===0?.92:.35+(i%3)*.1;const base=new THREE.Mesh(new THREE.CylinderGeometry(.4,.48,.15,32),new THREE.MeshStandardMaterial({color:0xd7d7d2,roughness:.8}));base.position.set(v.x,-.02,v.z);base.castShadow=true;base.receiveShadow=true;rig.add(base);const pin=new THREE.Mesh(new THREE.SphereGeometry(i===0?.24:.16,20,16),new THREE.MeshStandardMaterial({color:i===0?0x111111:0x555550,roughness:.4}));pin.position.set(v.x,height,v.z);pin.castShadow=true;rig.add(pin);const stem=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,height,8),new THREE.MeshStandardMaterial({color:0x555550}));stem.position.set(v.x,height/2,v.z);rig.add(stem)});
+ let drag=false,last=[0,0],rot=-.12;canvas.onpointerdown=e=>{drag=true;last=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)};canvas.onpointermove=e=>{if(!drag)return;rot+=(e.clientX-last[0])*.008;rig.rotation.y=rot;camera.position.y=Math.max(8,Math.min(17,camera.position.y+(e.clientY-last[1])*.025));camera.lookAt(3,0,2);last=[e.clientX,e.clientY]};canvas.onpointerup=()=>drag=false;new ResizeObserver(()=>{renderer.setSize(canvas.clientWidth,canvas.clientHeight,false);camera.aspect=canvas.clientWidth/canvas.clientHeight;camera.updateProjectionMatrix()}).observe(canvas);function tick(t){if(!drag)rig.rotation.y=rot+Math.sin(t*.0003)*.05;renderer.render(scene,camera);requestAnimationFrame(tick)}requestAnimationFrame(tick)}
+render3D();
+})();

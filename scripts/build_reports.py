@@ -1,152 +1,183 @@
-"""Build four monochrome, student-specific Experiment 9 report PDFs."""
+"""Build four individualized monochrome Experiment 9 ACO project reports."""
 from pathlib import Path
 import sys
-import time
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
-    TableStyle, PageBreak, Image, Preformatted, KeepTogether)
-from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image, Preformatted, KeepTogether
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT.parent.parent / "outputs"
+OUT = Path(r"C:\Users\hardi\Documents\Codex\2026-11-03\take\outputs")
 OUT.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(ROOT / "scripts"))
-from scheduler import generate_instance, optimize_pso, random_baseline, greedy_baseline, evaluate
+from route_optimizer import run_experiment, route_distance
 
+DATA = run_experiment()
+LOC = DATA["locations"]
+DIST = DATA["distances"]
+RESULTS = DATA["results"]
+ACO = RESULTS["ACO + 2-opt"]
+AUDIT = DATA["audit"]
 TEAM = [("Hardik Hinduja", 20), ("Avinash Gehi", 11), ("Sahil Deshmukh", 9), ("Siddharth Dey", 10)]
-SEED, STUDENTS, EXAMS, PERIODS, PARTICLES, ITERATIONS = 42, 120, 12, 8, 32, 100
-records, sizes, weights = generate_instance(SEED, STUDENTS, EXAMS)
-timings = {}
-for name, fn in [
-    ("Random assignment", lambda: random_baseline(weights, PERIODS, SEED + 99)),
-    ("Degree-greedy repair", lambda: greedy_baseline(weights, PERIODS)),
-    ("Discrete PSO", lambda: optimize_pso(weights, PERIODS, SEED + 99, PARTICLES, ITERATIONS)),
-]:
-    start = time.perf_counter()
-    result = fn()
-    timings[name] = time.perf_counter() - start
-    if name == "Random assignment": random_result = result
-    elif name == "Degree-greedy repair": greedy_result = result
-    else: pso_result = result
 
-def fmt(v, places=3): return f"{v:.{places}f}"
-def p(text, style="BodyText"): return Paragraph(text, styles[style])
 styles = getSampleStyleSheet()
-styles.add(ParagraphStyle(name="TitleCover", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=30, leading=35, alignment=TA_LEFT, textColor=colors.black, spaceAfter=14))
-styles.add(ParagraphStyle(name="SubCover", parent=styles["Normal"], fontName="Helvetica", fontSize=12, leading=18, textColor=colors.HexColor("#333333"), spaceAfter=12))
-styles.add(ParagraphStyle(name="H1Mono", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=18, leading=22, spaceBefore=3, spaceAfter=12, textColor=colors.black))
-styles.add(ParagraphStyle(name="H2Mono", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=11, leading=14, spaceBefore=10, spaceAfter=5, textColor=colors.black))
-styles.byName["BodyText"] = ParagraphStyle(name="BodyText", parent=styles["BodyText"], fontName="Helvetica", fontSize=8.5, leading=12, spaceAfter=6, textColor=colors.HexColor("#242424"))
-styles.add(ParagraphStyle(name="SmallText", parent=styles["BodyText"], fontSize=7.1, leading=9, spaceAfter=3))
-styles.add(ParagraphStyle(name="TableCell", parent=styles["BodyText"], fontSize=7.1, leading=8.5, spaceAfter=0))
-styles.add(ParagraphStyle(name="TinyCell", parent=styles["BodyText"], fontSize=5.8, leading=6.6, spaceAfter=0))
-styles.add(ParagraphStyle(name="CodeText", parent=styles["Code"], fontName="Courier", fontSize=6.5, leading=8, leftIndent=5, rightIndent=5, borderColor=colors.HexColor("#bdbdbd"), borderWidth=.5, borderPadding=7, spaceAfter=6))
-styles.add(ParagraphStyle(name="CenterSmall", parent=styles["SmallText"], alignment=TA_CENTER))
+styles.add(ParagraphStyle(name="CoverTitle", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=27, leading=32, alignment=TA_LEFT, textColor=colors.black, spaceAfter=12))
+styles.add(ParagraphStyle(name="CoverSub", parent=styles["Normal"], fontName="Helvetica", fontSize=10, leading=15, textColor=colors.black, spaceAfter=9))
+styles.add(ParagraphStyle(name="Section", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=17, leading=20, spaceBefore=2, spaceAfter=9, textColor=colors.black))
+styles.add(ParagraphStyle(name="Subsection", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=10.5, leading=13, spaceBefore=8, spaceAfter=4, textColor=colors.black))
+styles.add(ParagraphStyle(name="BodyMono", parent=styles["BodyText"], fontName="Helvetica", fontSize=8.1, leading=10.5, spaceAfter=5, textColor=colors.black))
+styles.add(ParagraphStyle(name="SmallMono", parent=styles["BodyText"], fontName="Helvetica", fontSize=6.8, leading=8, spaceAfter=3, textColor=colors.black))
+styles.add(ParagraphStyle(name="CellMono", parent=styles["BodyText"], fontName="Helvetica", fontSize=6.3, leading=7.4, spaceAfter=0, textColor=colors.black))
+styles.add(ParagraphStyle(name="TinyMono", parent=styles["BodyText"], fontName="Helvetica", fontSize=4.7, leading=5.5, spaceAfter=0, textColor=colors.black))
+styles.add(ParagraphStyle(name="CodeMono", parent=styles["Code"], fontName="Courier", fontSize=6.2, leading=7.5, leftIndent=4, rightIndent=4, borderColor=colors.black, borderWidth=.4, borderPadding=5, spaceAfter=5))
 
-def table(data, widths, small=False, repeat=1):
-    stylename = "TinyCell" if small else "TableCell"
-    converted=[]
-    for ri,row in enumerate(data):
-        converted.append([Paragraph(str(cell), styles[stylename]) if not isinstance(cell,Paragraph) else cell for cell in row])
-    t=Table(converted,colWidths=widths,repeatRows=repeat,hAlign="LEFT")
-    t.setStyle(TableStyle([
-        ("TEXTCOLOR",(0,0),(-1,-1),colors.black),
-        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
-        ("GRID",(0,0),(-1,-1),.35,colors.HexColor("#999999")),
-        ("VALIGN",(0,0),(-1,-1),"TOP"),
-        ("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4),
-        ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+
+def para(text, style="BodyMono"):
+    return Paragraph(str(text), styles[style])
+
+
+def grid(rows, widths, tiny=False, repeat=1):
+    sty = styles["TinyMono"] if tiny else styles["CellMono"]
+    data = [[cell if isinstance(cell, Paragraph) else Paragraph(str(cell), sty) for cell in row] for row in rows]
+    tbl = Table(data, colWidths=widths, repeatRows=repeat, hAlign="LEFT")
+    tbl.setStyle(TableStyle([
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("GRID", (0, 0), (-1, -1), .35, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]))
-    return t
+    return tbl
 
-def on_page(canvas, doc):
+
+def page_decor(canvas, doc):
     canvas.saveState()
-    w,h=letter
-    canvas.setStrokeColor(colors.HexColor("#b6b6b6"));canvas.setLineWidth(.45)
-    if doc.page>1:
-        canvas.line(.7*inch,h-.58*inch,w-.7*inch,h-.58*inch)
-        canvas.setFont("Helvetica",7);canvas.setFillColor(colors.HexColor("#555555"))
-        canvas.drawString(.7*inch,h-.45*inch,"VIVEKANAND EDUCATION SOCIETY'S INSTITUTE OF TECHNOLOGY")
-        canvas.drawRightString(w-.7*inch,h-.45*inch,"NIC LAB / EXPERIMENT 09")
-    canvas.line(.7*inch,.54*inch,w-.7*inch,.54*inch)
-    canvas.setFont("Helvetica",7);canvas.setFillColor(colors.HexColor("#555555"))
-    canvas.drawString(.7*inch,.37*inch,"Examination Timetable Scheduling Using PSO")
-    canvas.drawRightString(w-.7*inch,.37*inch,f"{doc.page}")
+    w, h = letter
+    canvas.setStrokeColor(colors.black)
+    canvas.setLineWidth(.4)
+    if doc.page > 1:
+        canvas.line(.68*inch, h-.56*inch, w-.68*inch, h-.56*inch)
+        canvas.setFont("Helvetica", 6.5)
+        canvas.drawString(.68*inch, h-.43*inch, "VIVEKANAND EDUCATION SOCIETY'S INSTITUTE OF TECHNOLOGY")
+        canvas.drawRightString(w-.68*inch, h-.43*inch, "NIC LAB / EXPERIMENT 09")
+    canvas.line(.68*inch, .52*inch, w-.68*inch, .52*inch)
+    canvas.setFont("Helvetica", 6.5)
+    canvas.drawString(.68*inch, .35*inch, "Vehicle Route Optimization Using ACO")
+    canvas.drawRightString(w-.68*inch, .35*inch, str(doc.page))
     canvas.restoreState()
 
-def make_story(student, roll):
-    story=[]
-    story += [Spacer(1,.55*inch),p("VIVEKANAND EDUCATION SOCIETY'S<br/>INSTITUTE OF TECHNOLOGY","SmallText"),Spacer(1,.18*inch)]
-    story += [p("Experiment 9<br/>Mini Project Report","TitleCover"),p("APPLICATION OF NATURE-INSPIRED COMPUTING TO A REAL-WORLD OPTIMIZATION PROBLEM","SubCover"),Spacer(1,.25*inch)]
-    story += [p("EXAMINATION TIMETABLE SCHEDULING<br/>USING PARTICLE SWARM OPTIMIZATION","H1Mono"),Spacer(1,.2*inch)]
-    story += [table([["STUDENT",student],["ROLL NUMBER",roll],["CLASS","D16 AD A/B"],["SUBJECT","NIA Lab"],["PROJECT TEAM","Hardik Hinduja 20 | Avinash Gehi 11 | Sahil Deshmukh 9 | Siddharth Dey 10"]],[1.35*inch,5.25*inch])]
-    story += [Spacer(1,.35*inch),p("Department of Artificial Intelligence and Data Science<br/>Vivekanand Education Society's Institute of Technology<br/>Experiment 9 | Submitted November 2026","SubCover"),Spacer(1,.45*inch)]
-    story += [p("This report documents a reproducible synthetic benchmark, a discrete PSO scheduler, an independent clash audit, and the project website. It follows the supplied mini-project brief and identifies the limits of the generated data.","BodyText"),PageBreak()]
 
-    story += [p("1. Project Summary and Problem Formulation","H1Mono")]
-    story += [p("This project assigns each examination to a period while reducing simultaneous exams taken by the same student. A weighted conflict graph records how many students take each exam pair. The primary objective is to minimize the student clash count. When clash scores tie, the schedule uses fewer periods and balances the load."),p("The selected assignment topic is Project 2, Examination Timetable Scheduling Using PSO. It is a strong mini-project choice because the optimization objective is observable, the result can be audited directly against registrations, and the timetable has a clear interactive representation." )]
-    story += [p("Study design","H2Mono"),table([
-      ["Item","Specification"],["Synthetic students","120, arranged in three cohorts of 40"],["Exams","12, four per synthetic cohort"],["Available periods","8 periods over four days"],["Student course load","3 or 4 exams from the student's cohort"],["PSO parameters","32 particles; 100 iterations; inertia 0.68; c1 = c2 = 1.42"],["Reproducibility","Instance seed 42; search seed 141"],["Primary metric","Weighted simultaneous exam pairs; independent student-pair audit"],["Secondary metrics","Periods used, load spread, runtime"],
-    ],[1.45*inch,5.15*inch])]
-    story += [p("Decision variables and constraints","H2Mono"),p("The decision variable xi in {0,...,7} gives the period for exam i. Every exam is assigned once, all period indexes must remain within the horizon, and no student should have two exams in the same period. The decoder prioritizes conflict-heavy exams and repairs candidate allocations before fitness comparison. Room capacity, invigilator availability, course precedence, variable exam lengths, and accessibility are outside this prototype." )]
-    story += [p("Privacy and use guardrails","H2Mono"),p("The notebook creates anonymous synthetic registrations only. It does not request student identifiers or grades. After optimization, assertions check exam count, period bounds, and agreement between the weighted objective and a separate audit of every student's exam pairs. A zero-clash outcome is reported only when the independent audit is zero. Results are illustrative and are not ready for institutional use."),PageBreak()]
+def route_stop_rows():
+    route = ACO["route"]
+    rows = [["Leg", "From", "To", "Distance (km)", "Cumulative (km)"]]
+    cumulative = 0.0
+    for step, (left, right) in enumerate(zip(route, route[1:]), 1):
+        length = DIST[left][right]
+        cumulative += length
+        rows.append([step, LOC[left]["name"], LOC[right]["name"], f"{length:.3f}", f"{cumulative:.3f}"])
+    return rows
 
-    story += [p("2. Method and Algorithm","H1Mono"),p("A particle stores one real-valued period preference per exam. At each iteration, velocity combines inertia, attraction to that particle's personal best, and attraction to the swarm's global best. Positions are clipped to the period range and decoded into discrete schedules."),p("Fitness formula","H2Mono"),Preformatted("fitness = clash_pairs * 10,000 + periods_used * 100 + load_spread",styles["CodeText"]),p("The large clash coefficient gives feasibility priority. Period count is optimized next; load spread breaks remaining ties. The conflict-aware decoder is deterministic for a given position and instance."),p("Pseudocode","H2Mono"),Preformatted("initialize particle preferences and velocities\nscore each candidate after degree-ordered repair\nfor each iteration:\n    update velocity toward personal and global best\n    clip positions to the available period range\n    repair each candidate to reduce weighted clashes\n    update personal and global bests by fitness\nindependently audit the final assignment\nexport schedule, benchmark, and audit tables",styles["CodeText"]),p("Guardrail checks in the notebook","H2Mono"),table([["Check","Expected result","Observed result"],["Every exam appears once","12 unique exams","PASS: 12 unique exams"],["Each period is in bounds","0 through 7","PASS: all in range"],["Independent audit agrees with objective","equal counts","PASS: 0 = 0"],["Student clash pairs","0 for this generated instance","PASS: 0"]],[2.0*inch,2.1*inch,2.5*inch]),p("Implementation excerpt from the Colab notebook","H2Mono")]
-    code="""for iteration in range(iterations):\n    for particle in swarm:\n        for d in range(exams):\n            r1, r2 = rng.random(), rng.random()\n            velocity[d] = (0.68 * velocity[d]\n                + 1.42 * r1 * (personal_best[d] - position[d])\n                + 1.42 * r2 * (global_best[d] - position[d]))\n            position[d] = clip(position[d] + velocity[d], 0, periods - 1)\n        plan = decode_repair(position, conflict_weights, periods)\n        score = evaluate(plan, conflict_weights, periods)\n        update_personal_and_global_best(score)"""
-    story += [Preformatted(code,styles["CodeText"]),p("The notebook includes the complete implementation. This excerpt shows the PSO movement and evaluation loop; candidate repair and objective code are also included there."),PageBreak()]
 
-    story += [p("3. Benchmark Results and Timetable","H1Mono"),p("All methods use the same synthetic registration instance. The random baseline assigns periods directly and is not repaired. Degree-greedy repair is a deterministic comparison. The PSO uses the same repair decoder and optimizes its particle preferences."),p("Benchmark comparison","H2Mono")]
-    result_rows=[["Method","Clash pairs","Periods","Load spread","Fitness","Runtime (s)"]]
-    for name,result in [("Random assignment",random_result),("Degree-greedy repair",greedy_result),("Discrete PSO",pso_result)]:
-        result_rows.append([name,result["clashes"],result["periods_used"],fmt(result["load_spread"]),fmt(result["fitness"],1),fmt(timings[name],4)])
-    story += [table(result_rows,[1.55*inch,.76*inch,.55*inch,.85*inch,.85*inch,1.05*inch]),Spacer(1,8),p("On this generated instance, random assignment yields 51 student clash pairs. Both repaired methods produce zero clashes using four periods. PSO reaches the same feasible objective as the greedy baseline, so this small case does not show PSO outperforming the baseline. Runtime is machine-dependent; the figures above were measured for this report build."),p("Optimized timetable","H2Mono")]
-    start_date=__import__('datetime').date(2026,11,9)
-    schedule_rows=[["Exam","Registrations","Day","Session","Period"]]
-    for e,period in enumerate(pso_result["plan"]):
-        day=(start_date+__import__('datetime').timedelta(days=period//2)).strftime("%a, %d %b")
-        session="09:00-12:00" if period%2==0 else "13:00-16:00"
-        schedule_rows.append([f"EX-{e+1:02d}",sizes[e],day,session,period+1])
-    story += [table(schedule_rows,[.86*inch,.9*inch,1.45*inch,1.55*inch,.66*inch]),p("Illustrative schedule labels are based on 9 November 2026. Actual exam dates and periods are demonstration metadata, not institutional bookings." ,"SmallText"),p("Period utilization","H2Mono")]
-    loads=pso_result["loads"]
-    utilization=[["Period","Exams","Exam IDs","Student registrations"]]
-    for period,count in enumerate(loads):
-        exams=[f"EX-{i+1:02d}" for i,pid in enumerate(pso_result["plan"]) if pid==period]
-        if not exams: continue
-        tot=sum(sizes[int(e[-2:])-1] for e in exams)
-        utilization.append([period+1,count,", ".join(exams),tot])
-    story += [table(utilization,[.75*inch,.72*inch,3.3*inch,1.45*inch]),PageBreak()]
+def story_for(student, roll):
+    story = [Spacer(1, .55*inch), para("VIVEKANAND EDUCATION SOCIETY'S<br/>INSTITUTE OF TECHNOLOGY", "SmallMono"), Spacer(1, .17*inch),
+             para("Experiment 9<br/>Mini Project Report", "CoverTitle"),
+             para("APPLICATION OF NATURE-INSPIRED COMPUTING TO A REAL-WORLD OPTIMIZATION PROBLEM", "CoverSub"), Spacer(1, .22*inch),
+             para("VEHICLE ROUTE OPTIMIZATION<br/>USING ANT COLONY OPTIMIZATION", "Section"), Spacer(1, .17*inch),
+             grid([["STUDENT", student], ["ROLL NUMBER", roll], ["CLASS", "D16 AD A/B"], ["SUBJECT", "NIA Lab"],
+                   ["PROJECT TEAM", "Hardik Hinduja 20 | Avinash Gehi 11 | Sahil Deshmukh 9 | Siddharth Dey 10"]], [1.35*inch, 5.1*inch]),
+             Spacer(1, .3*inch), para("Department of Artificial Intelligence and Data Science<br/>Vivekanand Education Society's Institute of Technology<br/>Experiment 9 Mini Project | November 2026", "CoverSub"), Spacer(1, .25*inch),
+             para("A reproducible synthetic delivery-route study using Ant Colony Optimization, a nearest-neighbor baseline, a random-tour baseline, exact enumeration, and an independent route audit. All locations and distances in this demonstration are synthetic.") , PageBreak()]
 
-    story += [p("4. Conflict Graph and Data Tables","H1Mono"),p("Each matrix cell counts the synthetic students who take both exams in that row and column. The diagonal is zero. Values outside each cohort's four-exam block are zero by design."),p("Conflict weight matrix","H2Mono")]
-    names=[f"EX-{i+1:02d}" for i in range(EXAMS)]
-    matrix=[["Exam"]+names]
-    for i,name in enumerate(names):matrix.append([name]+weights[i])
-    story += [table(matrix,[.48*inch]+[.49*inch]*EXAMS,small=True),Spacer(1,10),p("Anonymous registration sample","H2Mono")]
-    sample=[["Synthetic ID","Exam list","Count"]]
-    for i,row in enumerate(records[:12]):sample.append([f"S-{i+1:03d}",", ".join(f"EX-{e+1:02d}" for e in row),len(row)])
-    story += [table(sample,[1.1*inch,4.8*inch,.6*inch]),Spacer(1,10),p("Conflict objective and audit","H2Mono")]
-    total_conflicts=sum(weights[a][b] for a in range(EXAMS) for b in range(a+1,EXAMS))
-    audit=sum(1 for row in records for i,a in enumerate(row) for b in row[i+1:] if pso_result["plan"][a]==pso_result["plan"][b])
-    story += [table([["Metric","Result"],["Total nonzero conflict weight across all exam pairs",total_conflicts],["Student clash pairs in PSO schedule",pso_result["clashes"]],["Independent registration-level audit",audit],["Consistency check",f"{'PASS' if audit==pso_result['clashes'] else 'FAIL'}: objective {pso_result['clashes']} = audit {audit}"]],[3.5*inch,3.0*inch]),PageBreak()]
+    story += [para("1. Project Summary and Problem Formulation", "Section"),
+              para("Selected topic: Project 5, Vehicle Route Optimization Using Ant Colony Optimization (ACO). The task finds a short closed tour that starts at a depot, visits every delivery stop once, and returns to the depot. The demonstration uses Euclidean distance on a small synthetic coordinate map."),
+              para("Study design", "Subsection"),
+              grid([["Item", "Specification"], ["Locations", "10 total: one depot and nine synthetic stops"], ["Distance model", "Euclidean distance in illustrative kilometre units"], ["Route structure", "Start at depot, visit each stop once, return to depot"], ["ACO ants", str(ACO["ants"])], ["ACO iterations", str(ACO["iterations"])], ["Parameters", f"alpha={ACO['alpha']}; beta={ACO['beta']}; evaporation={ACO['evaporation']}; deposit=100"], ["Seed", str(ACO["seed"])], ["Validation", "Exhaustive enumeration of 9! possible tours"], ["Primary metric", "Closed-tour distance in km"]], [1.45*inch, 5.0*inch]),
+              para("Decision variables and constraints", "Subsection"),
+              para("A solution is an ordered permutation of all nine delivery stops between two depot entries. Every stop must appear exactly once; the depot must be both the first and last node; all route legs use nonnegative distances from the symmetric matrix. The report recomputes total distance from each consecutive pair of stops. Real road networks, traffic, vehicle capacities, time windows, driver hours, route restrictions, and live addresses are out of scope."),
+              para("Privacy and use guardrails", "Subsection"),
+              para("The map is fully synthetic and uses no customer names, addresses, or personal delivery records. The application must not be populated with private addresses without authorization and suitable privacy controls. Distance is straight-line demonstration distance, not an operational travel estimate. Exact enumeration provides a lower bound and validity reference only for this ten-node instance."), PageBreak()]
 
-    story += [p("5. Colab Notebook and Reproducibility","H1Mono"),p("The linked Colab notebook is built around the blank notebook supplied with the project request. Its code bootstraps the public repository copy, runs all notebook cells, displays the tables and monochrome conflict plot, and writes CSV exports into the Colab runtime."),p("Google Colab notebook","H2Mono"),p("https://colab.research.google.com/drive/1GxqpVK-q_ZGQ7XSdVVrjEuHLYpR0fctJ","SmallText"),p("Notebook output files","H2Mono"),table([["File","Contents"],["benchmark_results.csv","Baseline and PSO objective, periods, fitness, runtime, feasibility"],["optimized_timetable.csv","One period per exam and registration count"],["synthetic_registration_sample.csv","Anonymous synthetic student exam selections"],["conflict_weight_matrix.csv","Shared-student counts for every exam pair"],["guardrail_audit.csv","Post-run invariant and clash checks"]],[2.65*inch,3.85*inch]),p("Reproducibility procedure","H2Mono"),p("Open the notebook link and run all cells. Seed 42 regenerates the same synthetic registrations; the search seed is 141. The objective values are deterministic for this implementation. Wall-clock timing is reported locally and can vary across Colab runtimes."),p("Monochrome code excerpt","H2Mono")]
-    story += [Preformatted("def fitness(plan, conflict_weights, periods):\n    clashes = conflict_count(plan, conflict_weights)\n    used = len(set(plan))\n    spread = load_standard_deviation(plan, periods)\n    return clashes * 10_000 + used * 100 + spread\n\n# Independent student-level audit\naudit = sum(1 for student in registrations\n    for i, left in enumerate(student)\n    for right in student[i+1:]\n    if schedule[left] == schedule[right])\nassert audit == reported_clashes",styles["CodeText"]),p("Limitations","H2Mono"),p("This prototype does not model room capacity, invigilators, student accessibility, course sequencing, exam duration, or real enrollment data. The search is heuristic. One feasible synthetic result is not evidence of global optimality. Any production schedule requires validation by the institution's data owner and academic administrators."),PageBreak()]
+    story += [para("2. ACO Method and Implementation", "Section"),
+              para("Each ant builds a tour one stop at a time. The transition weight combines the pheromone trail on an edge with inverse distance. After a tour is complete, 2-opt reverses sub-paths whenever that shortens the closed tour. Pheromone evaporates, then the iteration-best and global-best tours deposit pheromone on their edges."),
+              para("Transition and pheromone rules", "Subsection"),
+              Preformatted("probability(i -> j) proportional to pheromone(i,j)^alpha * (1/distance(i,j))^beta\npheromone <- (1 - evaporation) * pheromone\niteration-best and global-best tours deposit Q / route_length", styles["CodeMono"]),
+              para("Pseudocode", "Subsection"),
+              Preformatted("initialize symmetric pheromone and inverse-distance heuristic\nfor each iteration:\n    for each ant:\n        grow a closed tour using roulette-wheel transitions\n        improve the tour with deterministic 2-opt\n    evaporate pheromone\n    reinforce iteration-best and global-best edges\nindependently verify route structure and recompute every leg", styles["CodeMono"]),
+              para("Validation checks", "Subsection"),
+              grid([["Check", "Expected", "Observed"], ["Depot starts and ends route", "True", str(AUDIT["closed_route_starts_and_ends_at_depot"])], ["Every delivery stop appears once", "9 unique stops", str(AUDIT["each_delivery_stop_visited_once"])], ["All stops included", "All 9 IDs", str(AUDIT["all_nodes_included"])], ["Optimizer equals recomputed legs", "Equal to 1e-9 km", str(AUDIT["distance_matches_optimizer"])], ["ACO route is valid", "True", str(AUDIT["route_is_valid"])], ["Gap to exact optimum", "Reported transparently", f"{AUDIT['gap_to_exact_percent']:.6f}%"]], [2.15*inch, 2.1*inch, 2.2*inch]),
+              para("Implementation excerpt", "Subsection"),
+              Preformatted("for ant in range(ants):\n    route = [depot]\n    while unvisited_stops:\n        next_stop = roulette_wheel(pheromone, inverse_distance)\n        route.append(next_stop)\n    route.append(depot)\n    route = two_opt(route, distances)\n    update_best_route(route)\n\nassert independent_audit(route).route_is_valid", styles["CodeMono"]), PageBreak()]
 
-    for path, caption in [(ROOT/"reports"/"website_hero.png","Website preview capture from the exact static build uploaded to Vercel: monochrome landing page and interactive 3D examination grid."),(ROOT/"reports"/"website_results.png","Website preview capture from the exact static build uploaded to Vercel: PSO output with zero audited clashes across four periods.")]:
-        story += [p("6. Website Evidence","H1Mono") if "website_hero" in path.name else p("Website Evidence Continued","H1Mono"),p(caption,"SmallText")]
-        if path.exists():
-            img=Image(str(path)); img._restrictSize(6.55*inch,7.95*inch); story += [img]
-        else: story += [p("Website screenshot unavailable during report build.")]
-        if "website_hero" in path.name: story += [p("The page uses a white background, black text, grayscale 3D geometry, and a responsive layout. The 3D model can be rotated by dragging; the simulator runs the same seeded cohort instance and exposes its schedule. Vercel Drop reported a temporary live URL, but this browser received HTTP 403 when it attempted to open that host. The included images are the local preview of the exact static build that was uploaded."),PageBreak()]
-    story += [p("References and Project Files","H1Mono"),p("Supplied Experiment 9 Mini-Project brief: Application of Nature-Inspired Computing Algorithms for Solving Real-World Optimization Problems; Project 2: Examination Timetable Scheduling Using PSO."),p("Project source: https://github.com/Hardik182005/NIA<br/>Temporary Vercel deployment (expires unless claimed): https://fleet-bayou-9rbyyz8.tmp.now","SmallText"),p("Implementation prompt: PROJECT_PROMPT.md. Full algorithm, baseline code, tables, audit assertions, plots, and CSV exports: notebooks/NIA_Exam_Timetable_PSO.ipynb. Website source and static deployment files: site/dist/.","BodyText"),Spacer(1,10),table([["Prepared for","NIA Lab | Experiment 9 Mini Project"],["Selected topic","Examination Timetable Scheduling Using PSO"],["Project team","Hardik Hinduja (20), Avinash Gehi (11), Sahil Deshmukh (9), Siddharth Dey (10)"],["Data notice","All registration records are generated and synthetic."]],[1.35*inch,5.15*inch])]
+    story += [para("3. Benchmark Results and Best Route", "Section"),
+              para("All methods use the same ten-location distance matrix. The random baseline reports the mean and best of 500 seeded tours; nearest neighbor is deterministic; ACO uses 48 ants for 160 iterations with 2-opt; exact enumeration checks every one of the 9! possible delivery-stop permutations."),
+              para("Benchmark comparison", "Subsection")]
+    rows = [["Method", "Distance (km)", "Runtime (s)", "Notes"]]
+    for name, result in RESULTS.items():
+        if name == "Random (500 tours)":
+            rows.append([name, f"Mean {result['distance']:.3f}; best {result['best_distance']:.3f}", f"{result['runtime_seconds']:.4f}", "500 seeded tours"])
+        else:
+            note = {"Nearest neighbor": "Greedy nearest unvisited stop", "ACO + 2-opt": "ACO candidate and 2-opt refinement", "Exact enumeration": "Global optimum for this small instance"}[name]
+            rows.append([name, f"{result['distance']:.3f}", f"{result['runtime_seconds']:.4f}", note])
+    story += [grid(rows, [1.35*inch, 1.3*inch, .82*inch, 2.95*inch]), Spacer(1, 6),
+              para(f"ACO + 2-opt returns {ACO['distance']:.3f} km. Exact enumeration also returns {RESULTS['Exact enumeration']['distance']:.3f} km, so the best route on this synthetic instance matches the enumerated optimum with a {AUDIT['gap_to_exact_percent']:.6f}% gap. This does not establish that ACO always finds an optimum; the exact check is feasible here because there are only nine delivery stops."),
+              para("Optimal closed route", "Subsection")]
+    route_names = " -> ".join(LOC[i]["name"] for i in ACO["route"])
+    story += [para(route_names, "SmallMono"), Spacer(1, 5), grid(route_stop_rows(), [.38*inch, 1.65*inch, 1.65*inch, 1.25*inch, 1.42*inch]),
+              Spacer(1, 6), grid([["Best route distance", "Stops", "Legs", "Exact gap"], [f"{ACO['distance']:.3f} km", "9", "10", f"{AUDIT['gap_to_exact_percent']:.6f}%"]], [1.65*inch, 1.45*inch, 1.5*inch, 1.75*inch]), PageBreak()]
+
+    story += [para("4. Synthetic Map and Distance Tables", "Section"),
+              para("The coordinate locations are invented solely to make the optimization reproducible. The distance matrix is symmetric with a zero diagonal. Values are Euclidean units presented as illustrative kilometres; they are not road distances."),
+              para("Location coordinates", "Subsection"),
+              grid([["ID", "Location", "X", "Y"]] + [[x["id"], x["name"], f"{x['x']:.1f}", f"{x['y']:.1f}"] for x in LOC], [.85*inch, 2.7*inch, 1.15*inch, 1.15*inch]),
+              para("Pairwise distance matrix (km)", "Subsection")]
+    labels = [x["id"].replace("STOP-", "S") for x in LOC]
+    matrix = [["From / to"] + labels]
+    for i, loc in enumerate(LOC):
+        matrix.append([labels[i]] + [f"{DIST[i][j]:.1f}" for j in range(len(LOC))])
+    story += [grid(matrix, [.63*inch] + [.58*inch]*len(LOC), tiny=True), Spacer(1, 8),
+              para("The ACO total is independently computed as the sum of the ten ordered route-leg distances. The complete distance matrix is included so that each result can be reproduced or recalculated without relying on a map service."), PageBreak()]
+
+    story += [para("5. Colab Notebook and Reproducibility", "Section"),
+              para("The linked Colab notebook bootstraps the public project repository, runs the self-contained route optimization cells, prints the full benchmark and route tables, draws a black-and-white convergence chart, and exports CSV files."),
+              para("Google Colab notebook", "Subsection"),
+              para("https://colab.research.google.com/drive/1GxqpVK-q_ZGQ7XSdVVrjEuHLYpR0fctJ", "SmallMono"),
+              para("Notebook result tables and CSV exports", "Subsection"),
+              grid([["Output", "Description"], ["Benchmark comparison", "Random 500-tour mean/best, nearest neighbor, ACO + 2-opt, exact optimum and runtime"], ["Best route legs", "Every ordered stop-to-stop leg and cumulative distance"], ["Synthetic locations", "Location IDs and X/Y coordinates"], ["Distance matrix", "All 100 symmetric pairwise distances"], ["Independent audit", "Route closure, one visit per stop, complete stop set, recomputed distance and exact gap"], ["Convergence data", "Best-so-far distance for each ACO iteration"], ["CSV files", "route_benchmark_results.csv, optimized_route_legs.csv, synthetic_locations.csv, pairwise_distance_matrix.csv, aco_convergence_summary.csv, route_guardrail_audit.csv"]], [1.65*inch, 4.8*inch]),
+              para("Reproduction steps", "Subsection"),
+              para("Open the notebook link and run all cells. The map and algorithm seed are fixed. The random baseline samples 500 tours; exact enumeration explores every permutation of nine stops. Runtime is measured per run and varies by hardware."),
+              para("Scope limits", "Subsection"),
+              para("This synthetic benchmark does not model roads, traffic, travel-time variation, vehicle capacity, time windows, depot hours, loading limits, driver breaks, or legal routing restrictions. It is a class project demonstration, not dispatch advice. Do not infer operational route quality from straight-line distance."),
+              Preformatted("route_distance = sum(distance[route[i]][route[i + 1]]\n                     for i in range(len(route) - 1))\nassert route[0] == route[-1] == depot\nassert sorted(route[1:-1]) == all_delivery_stops", styles["CodeMono"]), PageBreak()]
+
+    for filename, caption, heading in [("website_hero.png", "Landing page showing the monochrome 3D route network.", "6. Website Evidence"),
+                                       ("website_results.png", "Interactive ACO results table and route distance output.", "7. Website Results Evidence")]:
+        story += [para(heading, "Section"), para(caption, "SmallMono")]
+        img_path = ROOT / "reports" / filename
+        if img_path.exists():
+            img = Image(str(img_path))
+            img._restrictSize(6.55*inch, 7.9*inch)
+            story.append(img)
+        else:
+            story.append(para(f"Screenshot placeholder: {filename} will be supplied by the refreshed Project 5 website build."))
+        story.append(para("The website is designed with a white background, black text, grayscale 3D location pins, and an interactive route line. Drag the scene to rotate the model; the ACO control displays a computed route. Vercel Drop reported the temporary URL https://fleet-bassoon-mysacdt.tmp.now as live, but the host returned HTTP 403 when opened in this browser. The included image is a local preview of the exact static build uploaded; the temporary deployment expires unless claimed."))
+        if filename == "website_hero.png":
+            story.append(PageBreak())
+    story += [para("References and Project Files", "Subsection"),
+              para("Supplied Experiment 9 mini-project brief: Project 5, Vehicle Route Optimization Using Ant Colony Optimization."),
+              para("Project repository: https://github.com/Hardik182005/NIA<br/>Temporary Vercel deployment: https://fleet-bassoon-mysacdt.tmp.now"),
+              para("Implementation prompt: PROJECT_PROMPT.md. Source implementation: scripts/route_optimizer.py. Notebook: notebooks/NIA_Vehicle_Route_ACO.ipynb. Website source: site/dist/."),
+              grid([["Prepared for", "NIA Lab | Experiment 9 Mini Project"], ["Selected topic", "Project 5: Vehicle Route Optimization Using ACO"], ["Team", "Hardik Hinduja 20 | Avinash Gehi 11 | Sahil Deshmukh 9 | Siddharth Dey 10"], ["Data notice", "Synthetic coordinates and distances only"]], [1.2*inch, 5.25*inch])]
     return story
 
-for student,roll in TEAM:
-    safe=student.replace(" ","_")
-    path=OUT/f"{safe}_{roll}_Exam_Timetable_PSO_Report.pdf"
-    doc=SimpleDocTemplate(str(path),pagesize=letter,rightMargin=.7*inch,leftMargin=.7*inch,topMargin=.78*inch,bottomMargin=.72*inch,title=f"Exam Timetable Scheduling Using PSO - {student}",author="NIA Lab Project Team")
-    doc.build(make_story(student,roll),onFirstPage=on_page,onLaterPages=on_page)
+
+for student, roll in TEAM:
+    filename = f"{student.replace(' ', '_')}_{roll}_Vehicle_Route_ACO_Report.pdf"
+    path = OUT / filename
+    doc = SimpleDocTemplate(str(path), pagesize=letter, rightMargin=.68*inch, leftMargin=.68*inch, topMargin=.75*inch, bottomMargin=.68*inch, title=f"Vehicle Route Optimization Using ACO - {student}", author="NIA Lab Project Team")
+    doc.build(story_for(student, roll), onFirstPage=page_decor, onLaterPages=page_decor)
     print(path)

@@ -1,2 +1,3 @@
+# Runtime dependencies for the report and notebook environment
 pandas>=2.0
 matplotlib>=3.7

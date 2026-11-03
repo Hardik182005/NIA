@@ -1,7 +1,11 @@
-# Project Implementation Prompt
+# Implementation Prompt
 
-Build a complete, reproducible Nature-Inspired Computing mini project for examination timetable scheduling with discrete Particle Swarm Optimization. Generate a clearly synthetic student-course registration instance; construct a weighted conflict graph; implement personal-best and global-best particle updates with a deterministic repair decoder; compare PSO with random assignment and a degree-greedy baseline; audit hard constraints and student clashes; display monochrome tables for parameters, benchmark metrics, final timetable, period loads, sample registrations, and conflict weights; export CSV results; explain limitations and privacy guardrails; and provide a minimal black-on-white interactive website with a working 3D schedule visualization. Do not present synthetic results as real institutional data.
+Build a complete, reproducible Experiment 9 Nature-Inspired Computing mini project for **Project 5: Vehicle Route Optimization Using Ant Colony Optimization (ACO)**.
 
-## Selection rationale
+Create a small, deterministic, fully synthetic ten-location coordinate set: one depot and nine delivery stops. Build an Euclidean distance matrix and optimize a closed tour that visits every stop exactly once before returning to the depot. Implement ACO with roulette-wheel transition probabilities, pheromone evaporation/deposition, a fixed random seed, and a 2-opt improvement pass. Compare a mean of seeded random tours, nearest-neighbor, ACO, and exact enumeration of all 9! tours. Report runtime as environment-dependent, and never describe synthetic coordinates as a real map or road distance.
 
-The assignment brief offers ten topics. Examination Timetable Scheduling Using PSO is selected because it has a concrete decision space, an auditable clash objective, and a natural demonstration in both a Colab notebook and an interactive website. The benchmark is synthetic so the full workflow can be reproduced without private student-registration data.
+Add an independent route audit that checks depot start/end, stop uniqueness/completeness, and independently recomputes the distance by summing the route legs. Generate plain monochrome tables for parameters, synthetic locations, comparison metrics, route order and legs, full distance matrix, convergence, and audit. Export CSVs.
+
+Build a responsive minimal white-background, black-text website with a working draggable Three.js 3D route visualization, a Run ACO interaction, and a route-leg table. Use grayscale geometry and readable mobile layouts.
+
+Include explicit privacy and operational guardrails: never use private addresses or customer data; explain that Euclidean coordinate distance is not road routing; disclose missing traffic, capacity, time-window, and driver constraints; and state that the project is educational rather than dispatch-ready. Create four individual report PDFs with plain black-and-white tables and separate covers for Hardik Hinduja (20), Avinash Gehi (11), Sahil Deshmukh (9), and Siddharth Dey (10). Do not claim superiority beyond the evidence from this one small synthetic instance.

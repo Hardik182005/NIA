@@ -1,132 +1,97 @@
-# Orbit Exam Timetable Optimizer
+# Routecraft | Vehicle Route Optimization with ACO
 
-[![Project](https://img.shields.io/badge/project-NIC%20Mini--Project-111111)](#)
-[![Algorithm](https://img.shields.io/badge/algorithm-Discrete%20PSO-555555)](#method)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-111111)](#colab-notebook)
-[![License](https://img.shields.io/badge/license-Educational-lightgrey)](#scope-and-guardrails)
-[![Deployment](https://img.shields.io/badge/deployment-Vercel%20temporary-111111)](#deployment)
+[![Project](https://img.shields.io/badge/project-Experiment%209%20%2F%20Project%205-111111)](#project)
+[![Algorithm](https://img.shields.io/badge/algorithm-Ant%20Colony%20Optimization-111111)](#method)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-111111)](#run-locally)
+[![Data](https://img.shields.io/badge/data-synthetic-lightgrey)](#guardrails)
+[![Deploy](https://img.shields.io/badge/deployment-Vercel-111111)](#deployment)
 
 **Experiment 9 mini project for Nature-Inspired Computing (NIC Lab)**  
-**Topic:** Examination Timetable Scheduling Using Particle Swarm Optimization (PSO)  
-**Course:** D16 AD A/B  
-**Team:** Hardik Hinduja (Roll 20), Avinash Gehi (Roll 11), Sahil Deshmukh (Roll 9), Siddharth Dey (Roll 10)
+**Selected topic:** Project 5, Vehicle Route Optimization Using Ant Colony Optimization (ACO)  
+**Team:** Hardik Hinduja (20), Avinash Gehi (11), Sahil Deshmukh (9), Siddharth Dey (10)
 
-Orbit demonstrates how a discrete particle swarm can place examinations into periods while reducing conflicts between exams taken by the same student. The project includes a runnable Google Colab notebook, a small browser-based optimizer, an interactive 3D timetable visualization, detailed result tables, and four student-specific PDF reports.
+Routecraft compares pheromone-guided ACO with a random-tour baseline, nearest-neighbor construction, and exact enumeration. The static website presents the synthetic tour as an interactive monochrome 3D scene.
 
-> All benchmark data in this project is synthetically generated. Results do not represent an institutional student registry or timetable.
+> Every location and coordinate in this project is synthetic and illustrative. Distances are Euclidean coordinate distances, not road-network directions or navigation advice.
 
 ## Project links
 
 | Resource | Link |
 | --- | --- |
-| Live website | [Temporary Vercel deployment](https://fleet-bayou-9rbyyz8.tmp.now) (expires unless claimed; this browser received HTTP 403) |
-| Google Colab notebook | [Open the project notebook](https://colab.research.google.com/drive/1GxqpVK-q_ZGQ7XSdVVrjEuHLYpR0fctJ) |
-| GitHub repository | [Hardik182005/NIA](https://github.com/Hardik182005/NIA) |
+| Live website | [Temporary Vercel deployment](https://fleet-bassoon-mysacdt.tmp.now) (Vercel Drop reports live; this browser gets HTTP 403; temporary URL expires unless claimed). |
+| Google Colab | [Open the project notebook](https://colab.research.google.com/drive/1GxqpVK-q_ZGQ7XSdVVrjEuHLYpR0fctJ) |
+| GitHub | [Hardik182005/NIA](https://github.com/Hardik182005/NIA) |
+| Project prompt | [`PROJECT_PROMPT.md`](PROJECT_PROMPT.md) |
 
-## What is included
+## Problem and model
 
-| Path | Purpose |
-| --- | --- |
-| `notebooks/NIA_Exam_Timetable_PSO.ipynb` | Self-contained Colab notebook with PSO, audit checks, result tables, monochrome plot, and CSV exports |
-| `scripts/scheduler.py` | Reusable synthetic-data generator, conflict graph, decoder, baselines, and PSO implementation |
-| `site/dist/` | Responsive black-on-white website and working 3D/PSO demo |
-| `reports/` | Four monochrome PDF reports with individualized cover pages |
-| `PROJECT_PROMPT.md` | Prompt used to define the implementation and guardrails |
-| `reports/*_Report.pdf` | Four student-specific monochrome reports with covers, website screenshots, Colab code/results, and detailed tables |
+Find a short closed tour that starts at a depot, visits each of nine delivery stops exactly once, then returns to the depot. A fixed ten-node synthetic coordinate set forms a complete Euclidean distance matrix. The primary objective is total route distance.
 
-## Problem formulation
+ACO parameters: 48 ants, 160 iterations, pheromone influence alpha = 1, distance influence beta = 4, evaporation = 0.42, deposit = 100, seed = 141. Every constructed route receives a 2-opt local improvement before pheromone updates.
 
-Each exam is assigned to exactly one of eight available periods. For every pair of exams, the conflict graph stores how many students are registered in both. The primary objective is to reduce weighted simultaneous-exam conflicts. The secondary objective uses fewer periods and balances their loads.
+## Results
 
-The benchmark instance contains 120 synthetic students and 12 exams. Students belong to one of three cohorts and take three or four exams from that cohort's four-exam block. This produces a feasible conflict graph with a clear zero-clash target while keeping the test reproducible.
+The optimizer and exact enumerator both return **31.154 illustrative km** for this seeded instance. The result table is reproducible with `scripts/route_optimizer.py`.
 
-Fitness is calculated as:
-
-```text
-fitness = student_clash_pairs × 10,000 + periods_used × 100 + load_spread
-```
-
-The PSO uses 32 particles, 100 iterations, inertia 0.68, and cognitive/social coefficients 1.42. Particles hold continuous period preferences; a degree-ordered discrete decoder repairs each candidate assignment.
-
-## Result tables
-
-The notebook produces:
-
-- parameter and synthetic data summary
-- random, degree-greedy, and PSO benchmark comparison
-- optimized timetable and period load tables
-- anonymous synthetic registration sample
-- symmetric exam-conflict weight matrix
-- independent guardrail audit
-- CSV exports for benchmark results, timetable, sample registrations, conflict matrix, and audit
-
-Reference deterministic objective results (seed 42, Python implementation):
-
-| Method | Student clash pairs | Periods used | Feasible |
+| Method | Route distance (km) | Gap to exact | Notes |
 | --- | ---: | ---: | --- |
-| Random assignment | 51 | 7 | No |
-| Degree-greedy repair | 0 | 4 | Yes |
-| Discrete PSO | 0 | 4 | Yes |
+| Random tours (mean of 500) | 53.455 | 71.587% | Seed 17 |
+| Nearest neighbor | 43.401 | 39.313% | Greedy nearest unvisited stop |
+| ACO + 2-opt | 31.154 | 0.000% | 48 ants, 160 iterations |
+| Exact enumeration | 31.154 | 0.000% | All 9! stop orders |
 
-Runtime varies by machine; the notebook measures it during each run. The PSO and greedy decoder reach the same hard-constraint optimum on this small synthetic instance, so this result does not establish PSO superiority over the greedy baseline.
+Equal ACO and exact distances on this particular synthetic instance do not guarantee that ACO finds the global optimum on other problems.
+
+## Files
+
+| File | Purpose |
+| --- | --- |
+| `scripts/route_optimizer.py` | Synthetic instance, baselines, ACO, exact enumeration, and independent route audit |
+| `notebooks/NIA_Vehicle_Route_ACO.ipynb` | Runnable Colab notebook with detailed tables and CSV exports |
+| `site/dist/` | Responsive monochrome website with interactive 3D route and ACO simulator |
+| `reports/` | Four individual monochrome report PDFs with covers and detailed tables |
+| `reports/website_hero.png`, `reports/website_results.png` | Website visual evidence |
 
 ## Run locally
 
-Requirements: Python 3.10+, pandas, and matplotlib for the notebook tables and plot.
-
 ```bash
-python -m pip install pandas matplotlib
-python -m pip install jupyter
-jupyter notebook notebooks/NIA_Exam_Timetable_PSO.ipynb
-```
-
-To run the optimizer module without notebook dependencies:
-
-```bash
-python -c "from scripts.scheduler import run_experiment; r=run_experiment(); print({k:(v['clashes'],v['periods_used']) for k,v in r['results'].items()})"
-```
-
-To preview the website:
-
-```bash
+python scripts/route_optimizer.py
 python -m http.server 8765 --directory site/dist
 ```
 
-Then open `http://localhost:8765` and choose **Run PSO**. Drag across the 3D scene to orbit the timetable model.
+Open `http://localhost:8765`, drag over the 3D view to orbit it, and select **Run ACO** to refresh the route table.
+
+The notebook writes `route_benchmark_results.csv`, `optimized_route_legs.csv`, `synthetic_locations.csv`, `pairwise_distance_matrix.csv`, `aco_convergence_summary.csv`, and `route_guardrail_audit.csv` in the Colab runtime.
 
 ## Deployment
 
-The static site is deployable on Vercel from `site/dist`. In Vercel, import this repository and set the project root to `site/dist`, framework preset to **Other**, and build command to none. The production URL will be recorded here only after deployment is confirmed.
+The static site can be uploaded from `site/dist` using Vercel Drop or deployed by importing this repository and selecting `site/dist` as the static project root. Vercel Drop reported the updated ACO static build live at [https://fleet-bassoon-mysacdt.tmp.now](https://fleet-bassoon-mysacdt.tmp.now). The no-account deployment is temporary and expires unless claimed. This browser returned HTTP 403 on the temporary host, so screenshots in the reports show the local preview of the exact build that was uploaded.
 
-Vercel Drop reported a successful temporary deployment at [https://fleet-bayou-9rbyyz8.tmp.now](https://fleet-bayou-9rbyyz8.tmp.now). The no-account deployment expires unless claimed; this browser received HTTP 403 when opening the temporary host, so treat the URL as unverified for general access. The local screenshot evidence in the reports comes from the exact `site/dist` build uploaded. Do not commit or publish access tokens.
+## Guardrails
 
-## Scope and guardrails
-
-- Only synthetic student registrations are used. Never upload identifiable student records to this demonstration.
-- Each exam must be scheduled exactly once, every period index must be within the declared horizon, and the final schedule is independently audited against individual student exam pairs.
-- A zero-clash result is stated only if the audit returns zero.
-- The model does not include room capacities, invigilators, accessibility, course precedence, exam duration variation, or institutional rules.
-- PSO is stochastic in general and heuristic. Reproducible output on this instance is not proof of global optimality or operational readiness.
-- Any real timetable requires validation by its data owner and academic administrators before use.
+- Use synthetic illustrative coordinates only. Do not paste private addresses, customer identities, or delivery telemetry into this demo.
+- A route starts and ends at the depot and visits every synthetic stop exactly once.
+- The independent audit recomputes route distance from the listed legs and checks completeness before results are presented.
+- Exact enumeration provides a lower-bound comparison only for this small nine-stop example.
+- The model omits real road networks, traffic, vehicle capacity, time windows, driver hours, costs, and safety constraints. It is not ready for operational dispatch.
 
 ## Individual reports
 
-| Student | Roll no. | PDF report |
+| Student | Roll no. | Report |
 | --- | ---: | --- |
-| Hardik Hinduja | 20 | [Open report](reports/Hardik_Hinduja_20_Exam_Timetable_PSO_Report.pdf) |
-| Avinash Gehi | 11 | [Open report](reports/Avinash_Gehi_11_Exam_Timetable_PSO_Report.pdf) |
-| Sahil Deshmukh | 9 | [Open report](reports/Sahil_Deshmukh_9_Exam_Timetable_PSO_Report.pdf) |
-| Siddharth Dey | 10 | [Open report](reports/Siddharth_Dey_10_Exam_Timetable_PSO_Report.pdf) |
+| Hardik Hinduja | 20 | `reports/Hardik_Hinduja_20_Vehicle_Route_ACO_Report.pdf` |
+| Avinash Gehi | 11 | `reports/Avinash_Gehi_11_Vehicle_Route_ACO_Report.pdf` |
+| Sahil Deshmukh | 9 | `reports/Sahil_Deshmukh_9_Vehicle_Route_ACO_Report.pdf` |
+| Siddharth Dey | 10 | `reports/Siddharth_Dey_10_Vehicle_Route_ACO_Report.pdf` |
 
 ## Team
 
 | Roll no. | Student | Contribution area |
 | ---: | --- | --- |
 | 20 | Hardik Hinduja | Project coordination and interface |
-| 11 | Avinash Gehi | PSO and implementation |
-| 9 | Sahil Deshmukh | Synthetic instance and evaluation |
+| 11 | Avinash Gehi | ACO implementation |
+| 9 | Sahil Deshmukh | Synthetic instance and benchmark |
 | 10 | Siddharth Dey | Results, visualization, and report |
 
-## Acknowledgment
+Prepared for Experiment 9 in the Department of Artificial Intelligence and Data Science, Vivekanand Education Society's Institute of Technology.
 
-Prepared for the Experiment 9 mini project in the Department of Artificial Intelligence and Data Science, Vivekanand Education Society's Institute of Technology.

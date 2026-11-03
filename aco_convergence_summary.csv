@@ -1,0 +1,7 @@
+Metric,Value
+Best distance after iteration 1 (km),31.153595
+Best distance after iteration 160 (km),31.153595
+Iterations,160
+Best-so-far history is non-increasing,True
+Exact optimum (km),31.153595
+ACO gap to exact (%),0.0

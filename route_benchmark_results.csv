@@ -1,0 +1,5 @@
+Method,Distance (km),Reference / detail,Runtime seconds,Gap to exact (%)
+Random (500 tours),53.455,mean of 500 seeded tours,0.0027,71.585
+Nearest neighbor,43.401,greedy nearest unvisited stop,0.0,39.313
+ACO + 2-opt,31.154,48 ants; 160 iterations; seed 141,2.4531,0.001
+Exact enumeration,31.154,"global optimum over 362,880 tours",1.1661,0.001
