@@ -18,7 +18,7 @@ Routecraft compares pheromone-guided ACO with a random-tour baseline, nearest-ne
 
 | Resource | Link |
 | --- | --- |
-| Live website | [Temporary Vercel deployment](https://fleet-bassoon-mysacdt.tmp.now) (Vercel Drop reports live; this browser gets HTTP 403; temporary URL expires unless claimed). |
+| Live website | [Routecraft production deployment](https://nia-dist.vercel.app/) (checked; HTTP 200, page title `Routecraft | ACO Vehicle Route Optimizer`). |
 | Google Colab | [Open the project notebook](https://colab.research.google.com/drive/1GxqpVK-q_ZGQ7XSdVVrjEuHLYpR0fctJ) |
 | GitHub | [Hardik182005/NIA](https://github.com/Hardik182005/NIA) |
 | Project prompt | [`PROJECT_PROMPT.md`](PROJECT_PROMPT.md) |
@@ -65,7 +65,7 @@ The notebook writes `route_benchmark_results.csv`, `optimized_route_legs.csv`, `
 
 ## Deployment
 
-The static site can be uploaded from `site/dist` using Vercel Drop or deployed by importing this repository and selecting `site/dist` as the static project root. Vercel Drop reported the updated ACO static build live at [https://fleet-bassoon-mysacdt.tmp.now](https://fleet-bassoon-mysacdt.tmp.now). The no-account deployment is temporary and expires unless claimed. This browser returned HTTP 403 on the temporary host, so screenshots in the reports show the local preview of the exact build that was uploaded.
+The static site is deployed to production at [https://nia-dist.vercel.app/](https://nia-dist.vercel.app/). The production URL was checked successfully: it returned HTTP 200 and the expected Routecraft page title. The reports include screenshots of the monochrome 3D website.
 
 ## Guardrails
 

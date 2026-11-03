@@ -164,12 +164,12 @@ def story_for(student, roll):
             story.append(img)
         else:
             story.append(para(f"Screenshot placeholder: {filename} will be supplied by the refreshed Project 5 website build."))
-        story.append(para("The website is designed with a white background, black text, grayscale 3D location pins, and an interactive route line. Drag the scene to rotate the model; the ACO control displays a computed route. Vercel Drop reported the temporary URL https://fleet-bassoon-mysacdt.tmp.now as live, but the host returned HTTP 403 when opened in this browser. The included image is a local preview of the exact static build uploaded; the temporary deployment expires unless claimed."))
+        story.append(para("The website is designed with a white background, black text, grayscale 3D location pins, and an interactive route line. Drag the scene to rotate the model; the ACO control displays a computed route. The production website is deployed at https://nia-dist.vercel.app/ and was checked successfully with an HTTP 200 response and the expected Routecraft page title. The included screenshots show the same monochrome 3D website."))
         if filename == "website_hero.png":
             story.append(PageBreak())
     story += [para("References and Project Files", "Subsection"),
               para("Supplied Experiment 9 mini-project brief: Project 5, Vehicle Route Optimization Using Ant Colony Optimization."),
-              para("Project repository: https://github.com/Hardik182005/NIA<br/>Temporary Vercel deployment: https://fleet-bassoon-mysacdt.tmp.now"),
+              para("Project repository: https://github.com/Hardik182005/NIA<br/>Production website: https://nia-dist.vercel.app/"),
               para("Implementation prompt: PROJECT_PROMPT.md. Source implementation: scripts/route_optimizer.py. Notebook: notebooks/NIA_Vehicle_Route_ACO.ipynb. Website source: site/dist/."),
               grid([["Prepared for", "NIA Lab | Experiment 9 Mini Project"], ["Selected topic", "Project 5: Vehicle Route Optimization Using ACO"], ["Team", "Hardik Hinduja 20 | Avinash Gehi 11 | Sahil Deshmukh 9 | Siddharth Dey 10"], ["Data notice", "Synthetic coordinates and distances only"]], [1.2*inch, 5.25*inch])]
     return story
